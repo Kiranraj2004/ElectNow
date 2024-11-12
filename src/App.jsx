@@ -9,6 +9,8 @@ import Login from './components/Login';
 import NoMatch from './components/NoMatch';
 import Navbar from './components/Navbar';
 import { AuthProvider } from './components/contextapi/AuthContext';
+import RoomCodeEntry from './pages/RoomCodeEntry';
+import ResultsPage from './pages/ResultsPage';
 
 // Contexts to hold user data and login status
 
@@ -22,9 +24,10 @@ function App() {
             <Routes>
               <Route path="/" element={<LandingPage />} />
               <Route path="/create-election" element={<CreateElection />} />
-              <Route path="/room-entry" element={<RoomEntry />} />
-              <Route path="/vote/:roomId" element={<VotingPage />} />
-              <Route 
+              <Route path="/room" element={<RoomCodeEntry></RoomCodeEntry>} />
+              <Route path="/vote/:roomCode" element={<VotingPage />} />
+              <Route path="/results/:roomCode"  element={<ResultsPage></ResultsPage>}></Route>
+              <Route  
                 path="/login" 
                 element={<Login/>} 
               />
