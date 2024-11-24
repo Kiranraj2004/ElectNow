@@ -4,10 +4,24 @@
 
 @layer base {
     body {
-      @apply bg-white text-gray-900 dark:bg-gray-900 dark:text-white;
+      @apply bg-white text-gray-900 dark:bg-black dark:text-white;
+    }
+  :root {
+        --color-1: 0 100% 63%;
+        --color-2: 270 100% 63%;
+        --color-3: 210 100% 63%;
+        --color-4: 195 100% 63%;
+        --color-5: 90 100% 63%;
+    }
+  .dark {
+        --color-1: 0 100% 63%;
+        --color-2: 270 100% 63%;
+        --color-3: 210 100% 63%;
+        --color-4: 195 100% 63%;
+        --color-5: 90 100% 63%;
     }
   }
-:root {
+/* :root {
   font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
@@ -18,7 +32,7 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
+} */
 /* Custom Global Styles */
 h1, h2, h3, h4, h5, h6 {
     font-weight: 600;
@@ -137,6 +151,10 @@ code {
     padding: 0.25rem 0.5rem;
     border-radius: 0.375rem;
 }
+
+
+
+
 
 @layer base {
   :root {
