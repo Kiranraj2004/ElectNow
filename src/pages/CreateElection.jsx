@@ -20,6 +20,10 @@ function CreateElection() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
+  const [days, setDays] = useState(0);
+  const [hours, setHours] = useState(0);
+  const [minutes, setMinutes] = useState(0);
+
   const { user, isLoading } = useAuth0();
 
   // Handle adding a new member
@@ -115,9 +119,18 @@ function CreateElection() {
     try {
       setLoading(true);
       // Insert election
+      const currentDateTime = new Date();
+
+      // Calculate the voting deadline
+      const votingDeadline = new Date(
+        currentDateTime.getTime() +
+          days * 24 * 60 * 60 * 1000 + // Days to milliseconds
+          hours * 60 * 60 * 1000 + // Hours to milliseconds
+          minutes * 60 * 1000 // Minutes to milliseconds
+      );
       const { data: electionData, error: electionError } = await supabase
         .from("elections")
-        .insert([{ name: electionName, created_by: user.email  }])
+        .insert([{ name: electionName, created_by: user.email ,voting_deadline: votingDeadline.toISOString(),  }])
         .select();
   
       if (electionError) {
@@ -283,6 +296,35 @@ function CreateElection() {
               ))}
             </div>
 
+
+            <div>
+                    <h2>Set Voting Duration</h2>
+                    <label >Days : </label>
+                    <input
+                      type="number"
+                      placeholder="Days"
+                     
+                      onChange={(e) => setDays(Number(e.target.value))}
+                      className="border p-2 rounded text-black"
+                    />
+                     <label >Hours: </label>
+                    <input
+                      type="number"
+                      placeholder="Hours"
+                      
+                      onChange={(e) => setHours(Number(e.target.value))}
+                      className="border p-2 rounded text-black"
+                    />
+                     <label >Minutes: </label>
+                    <input
+                      type="number"
+                      placeholder="Minutes"
+                      
+                      onChange={(e) => setMinutes(Number(e.target.value))}
+                      className="border p-2 rounded text-black"
+                    />
+                  </div>
+
             <div className="flex justify-between items-center">
               <Button
                 variant="outline"
@@ -292,6 +334,8 @@ function CreateElection() {
                 <ChevronLeft className="h-4 w-4 mr-2" />
                 Go Back
               </Button>
+
+
               <div className="space-x-2">
                 <Button
                   variant="outline"

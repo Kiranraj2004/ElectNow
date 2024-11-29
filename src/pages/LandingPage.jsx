@@ -48,8 +48,8 @@ const StepCard = ({ step, description }) => (
 
 const LandingPage = () => {
   const navigate=useNavigate();
-  console.log(import.meta.env.VITE_REACT_APP_DOMIN);
-  const { isAuthenticated, loginWithRedirect, logout } = useAuth0();
+  const [useremail,setuseremail]=useState();
+  const { isAuthenticated, loginWithRedirect, isLoading,user } = useAuth0();
   const getstrtedbuttonhandler=()=>{
     if(isAuthenticated){
       navigate("/dashboard");
@@ -57,6 +57,29 @@ const LandingPage = () => {
       loginWithRedirect();
     }
   }
+
+  useEffect(() => {
+    const fetchUserEmail = async () => {
+      try {
+        if (isLoading) {
+          console.log("Waiting for Auth0 to finish loading...");
+          return; // Do nothing until Auth0 is loaded
+        }
+  
+        if (isAuthenticated && user?.email) {
+          setuseremail(user.email);
+        }
+      } catch (error) {
+        console.error("Error fetching user email:", error);
+      }
+    };
+  
+    fetchUserEmail(); // Call the asynchronous function
+  }, [isAuthenticated, user, isLoading]);
+  
+  
+  
+  
 
 
   return (

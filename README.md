@@ -1,6 +1,4 @@
-Here’s a detailed **README.md** template for your election-related project. Customize it as needed.
 
----
 
 # **ElectNow - Election Management System**
 
@@ -171,5 +169,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - **Tailwind CSS**: For modern and efficient styling.
 
 ---
-
-This README provides comprehensive details about your project. Let me know if you’d like help tweaking any section!
