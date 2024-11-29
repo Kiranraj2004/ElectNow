@@ -6,11 +6,16 @@ import Login from './components/LoginButton';
 import NoMatch from './components/NoMatch';
 import ThemeSwitcher from './components/theme-provider';
 import Dashboard from './pages/Dashboard';
+import Navbar from './components/Navbar';
+import Roompage from './pages/Roompage';
+import VotingPage from './pages/VotingPage';
+import ResultsPage from './pages/ResultsPage';
 
 // Contexts to hold user data and login status
 
 
 function App() {
+
   return (
     <ThemeSwitcher >
     <div className="min-h-screen">
@@ -24,6 +29,10 @@ function App() {
               <Route path="/create-election" element={<CreateElection />} />
               <Route path='/dashboard' element={<Dashboard></Dashboard> } />
               <Route path="*" element={<NoMatch />} />
+              <Route path="/room/:electionId" element={<Roompage></Roompage>} />
+              <Route path="/vote/:electionId" element={<VotingPage></VotingPage>} />
+              <Route path="/results/:election_id" element={<ResultsPage />} />
+              <Route path="/navbar" element={<Navbar />} />
             </Routes>
             
           

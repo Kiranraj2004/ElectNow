@@ -19,7 +19,6 @@ import { asset } from '@/assets/asset';
 
 const AuthButton = () => {
   const { loginWithRedirect, logout, isAuthenticated, user } = useAuth0();
-  console.log(user)
 
   return isAuthenticated ? (
     <div className="flex flex-row mr-14 ">

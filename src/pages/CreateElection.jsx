@@ -1,19 +1,31 @@
-import React, { useState } from "react";
+import React, { useState,useEffect   } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "@/supabaseClient";
+import { useAuth0 } from '@auth0/auth0-react';
+
+import { Plus, Minus, Trash2, ChevronLeft, Check } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Label } from "@/components/ui/label"
 
 function CreateElection() {
   const [electionName, setElectionName] = useState("");
   const [positions, setPositions] = useState([
-    { position: "", members: [{ name: "", votes: 0 }] },
+    { position: "", members: [{ name: "" }] },
   ]);
-  const [showConfirmation, setShowConfirmation] = useState(false); // For confirmation message
-  const [description, setDescription] = useState(""); // Optional description field
+  const [issucess, setsucess] = useState(false);
+  const[isLoading1, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // Handle adding members for a specific position
+  const { user, isLoading } = useAuth0();
+
+  // Handle adding a new member
   const addMember = (positionIndex) => {
     const newPositions = [...positions];
-    newPositions[positionIndex].members.push({ name: "", votes: 0 });
+    newPositions[positionIndex].members.push({ name: "" });
     setPositions(newPositions);
   };
 
@@ -26,7 +38,7 @@ function CreateElection() {
 
   // Handle adding a new position
   const addPosition = () => {
-    setPositions([...positions, { position: "", members: [{ name: "", votes: 0 }] }]);
+    setPositions([...positions, { position: "", members: [{ name: "" }] }]);
   };
 
   // Handle removing a position
@@ -35,7 +47,7 @@ function CreateElection() {
     setPositions(newPositions);
   };
 
-  // Handle input change for position or members
+  // Handle input change for position or member
   const handleInputChange = (value, positionIndex, memberIndex = null) => {
     const newPositions = [...positions];
     if (memberIndex !== null) {
@@ -46,144 +58,271 @@ function CreateElection() {
     setPositions(newPositions);
   };
 
-  // Validate form fields
+  // Form validation
   const validateFields = () => {
     if (!electionName.trim()) {
-      alert("Election name cannot be empty.");
+      setError("Election name cannot be empty.");
+        setTimeout(function () {
+      setError(""); // Clears the message after 3 seconds
+    }, 3000);
       return false;
     }
-
     for (let pos of positions) {
       if (!pos.position.trim()) {
-        alert("All positions must have a name.");
+        setError("All positions must have a name.");
+        setTimeout(function () {
+          setError(""); // Clears the message after 3 seconds
+        }, 3000);
         return false;
       }
       for (let member of pos.members) {
         if (!member.name.trim()) {
-          alert("All members must have a name.");
+          setError("All members must have a name.");
+          setTimeout(function () {
+            setError(""); // Clears the message after 3 seconds
+          }, 3000);
           return false;
         }
       }
     }
+    
     return true;
   };
 
-  // Submit function to create election
-  const handleSubmit = (event) => {
-    event.preventDefault();
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (isLoading) return; // Wait until Auth0 finishes loading
+      if (!user || !user.email) {
+        navigate("/"); // Redirect to the landing page if user is not logged in
+        return;
+      }
 
-    if (!validateFields()) return;
-
-    const electionData = {
-      name: electionName,
-      description,
-      positions,
+      setMessage("Loading recent elections...");
+      const elections = await fetchRecentElections(user.email);
+      setRecentElections(elections);
+      setMessage("");
     };
 
-    // Log election data (replace with API call to save data)
-    console.log("Election Created:", electionData);
+    fetchUserData();
+  }, [user, isLoading]);
 
-    // Show confirmation
-    setShowConfirmation(true);
+  // Submit function
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+  
+    if (!validateFields()) return;
+  
+    try {
+      setLoading(true);
+      // Insert election
+      const { data: electionData, error: electionError } = await supabase
+        .from("elections")
+        .insert([{ name: electionName, created_by: user.email  }])
+        .select();
+  
+      if (electionError) {
+        console.error("Error creating election:", electionError);
+        return;
+      }
+  
+      const electionId = electionData[0].id;
+  
+      // Insert positions and their members
+      for (const pos of positions) {
+        const { data: positionData, error: positionError } = await supabase
+          .from("positions")
+          .insert([{ election_id: electionId, position_name: pos.position }])
+          .select();
+  
+        if (positionError) {
+          console.error("Error creating position:", positionError);
+          continue; // Skip to the next position if there's an error
+        }
+  
+        const positionId = positionData[0].id;
+  
+        // Insert members for the position
+        const memberInsertions = pos.members.map((member) =>
+          supabase
+            .from("members")
+            .insert([{ position_id: positionId, member_name: member.name }])
+        );
+  
+        const memberResults = await Promise.all(memberInsertions);
+  
+        // Check for any member insertion errors
+        memberResults.forEach(({ error: memberError }, idx) => {
+          if (memberError) {
+            console.error(
+              `Error creating member '${pos.members[idx].name}':`,
+              memberError
+            );
+          }
+        });
+      }
+      const { data: positionData, error: positionError } = await supabase
+          .from("user_elections")
+          .insert([{ user_email: user.email, election_id: electionId ,election_name: electionName}])
+          .select();
+  
+        if (positionError) {
+          console.error("Error creating position:", positionError);
+          // Skip to the next position if there's an error
+        }
 
-    // Reset form fields after confirmation
-    setTimeout(() => {
-      setShowConfirmation(false);
-    }, 4000);
+  
+      console.log("Election created successfully!");
+          setError("Election created successfully");
+          setsucess(true);
+    setTimeout(function () {
+      setError("");
+      setsucess(true); // Clears the message after 3 seconds
+    }, 3000);
+    setLoading(false);
+      navigate(`/room/${electionId}`);
+    
+    } catch (error) {
+      console.error("Unexpected error creating election:", error);
+    }
   };
+  
 
   return (
-    <div className="create-election p-3 text-black dark:text-white">
-      {showConfirmation && (
-        <div className="fixed top-10 left-1/2 transform -translate-x-1/2 bg-green-500 text-white font-bold py-2 px-4 rounded-md shadow-md">
-          Election created successfully!
-        </div>
-      )}
-      <h2 className="text-center text-3xl mt-2 font-bold text-blue-500">Create Election</h2>
+    <div className="min-h-screen bg-gradient-to-b from-blue-100 to-white dark:from-blue-900 dark:to-gray-900 p-4 sm:p-6 md:p-8">
+      <Card className="max-w-4xl mx-auto">
+        <CardHeader>
+          <CardTitle className="text-3xl font-bold text-center text-blue-600 dark:text-blue-400">
+            Create Election
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -50 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -50 }}
+                className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 p-4 rounded-md shadow-lg ${
+                  issucess ? "bg-green-500" : "bg-red-500"
+                } text-white font-bold`}
+              >
+                {error}
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-      {/* Election Name Input */}
-      <div className="flex flex-col space-y-2 items-center">
-        <label className="font-bold mt-6">Election Name:</label>
-        <input
-          type="text"
-          value={electionName}
-          onChange={(e) => setElectionName(e.target.value)}
-          className="rounded-md border p-2 focus:outline-none focus:ring focus:ring-blue-500 w-96 text-black font-bold placeholder:font-bold"
-          placeholder="Enter an election name"
-        />
-      </div>
-
-      {/* Positions and Members */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8">
-        {positions.map((pos, posIdx) => (
-          <div key={posIdx} className="position rounded-md border border-gray-300 p-4">
-            <h3 className="text-lg font-medium">Position {posIdx + 1}</h3>
-            <div className="flex flex-col space-y-2 items-center">
-              <label className="">Position Name:</label>
-              <input
-                type="text"
-                placeholder="Enter Position Name"
-                value={pos.position}
-                onChange={(e) => handleInputChange(e.target.value, posIdx)}
-                className="w-96 rounded-md border border-gray-300 p-2 font-semibold text-black focus:outline-none focus:ring focus:ring-blue-500"
+          <div className="space-y-6">
+            <div>
+              <Label htmlFor="electionName">Election Name</Label>
+              <Input
+                id="electionName"
+                value={electionName}
+                onChange={(e) => setElectionName(e.target.value)}
+                placeholder="Enter an election name"
+                className="mt-1"
               />
             </div>
-            {pos.members.map((member, memIdx) => (
-              <div key={memIdx} className="flex items-center space-x-2 m-5">
-                <input
-                  type="text"
-                  placeholder="Enter Member Name"
-                  value={member.name}
-                  onChange={(e) => handleInputChange(e.target.value, posIdx, memIdx)}
-                  className="w-full rounded-md border text-black border-gray-300 p-2 focus:outline-none focus:ring focus:ring-blue-500 placeholder:font-bold"
-                />
-                <button
-                  onClick={() => deleteMember(posIdx, memIdx)}
-                  className="bg-red-500 text-white rounded-md px-2 py-1"
-                >
-                  Delete
-                </button>
-              </div>
-            ))}
-            <button
-              onClick={() => addMember(posIdx)}
-              className="bg-green-500 text-white rounded-md px-2 py-1"
-            >
-              Add Member
-            </button>
-            <button
-              onClick={() => removePosition(posIdx)}
-              className="bg-red-500 text-white rounded-md px-2 py-1"
-            >
-              Remove Position
-            </button>
-          </div>
-        ))}
-      </div>
 
-      {/* Form Actions */}
-      <div className="flex justify-end mt-4">
-        <button
-          onClick={addPosition}
-          className="bg-green-500 text-white rounded-md px-2 py-1"
-        >
-          Add Another Position
-        </button>
-        <button
-          onClick={handleSubmit}
-          className="bg-blue-500 text-white rounded-md px-2 py-1 ml-2"
-        >
-          Confirm Election
-        </button>
-      </div>
-      <button
-        onClick={() => navigate("/dashboard")}
-        className="bg-blue-500 text-white rounded-md px-2 py-1 ml-2"
-      >
-        Go back
-      </button>
+            <div className="space-y-4">
+              {positions.map((pos, posIdx) => (
+                <Card key={posIdx} className="overflow-hidden">
+                  <CardHeader className="bg-blue-50 dark:bg-blue-900">
+                    <CardTitle className="text-lg font-medium flex justify-between items-center">
+                      Position {posIdx + 1}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="bg-red-500"
+                        onClick={() => removePosition(posIdx)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor={`position-${posIdx}`}>Position Name</Label>
+                      <Input
+                        id={`position-${posIdx}`}
+                        value={pos.position}
+                        onChange={(e) => handleInputChange(e.target.value, posIdx)}
+                        placeholder="Enter Position Name"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      {pos.members.map((member, memIdx) => (
+                        <div key={memIdx} className="flex items-center space-x-2">
+                          <Input
+                            value={member.name}
+                            onChange={(e) => handleInputChange(e.target.value, posIdx, memIdx)}
+                            placeholder="Enter Member Name"
+                          />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="bg-red-500"
+                            onClick={() => deleteMember(posIdx, memIdx)}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addMember(posIdx)}
+                      className=" bg-black text-white dark:bg-white dark:text-black"  
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Member
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="flex justify-between items-center">
+              <Button
+                variant="outline"
+                onClick={() => navigate("/dashboard")}
+                className=" bg-black text-white dark:bg-white dark:text-black"  
+              >
+                <ChevronLeft className="h-4 w-4 mr-2" />
+                Go Back
+              </Button>
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  onClick={addPosition}
+                  className=" bg-black text-white dark:bg-white dark:text-black"  
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Position
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isLoading1}
+                >
+                  {isLoading1 ? (
+                    <motion.div
+                      className="h-5 w-5 border-t-2 border-b-2 border-white rounded-full animate-spin"
+                    />
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      Confirm Election
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
-  );
+  )
 }
 
 export default CreateElection;
