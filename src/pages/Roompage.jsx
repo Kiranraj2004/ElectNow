@@ -146,6 +146,10 @@ function Roompage() {
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-white dark:from-blue-900 dark:to-gray-900 p-4 sm:p-6 md:p-8">
       <Card className="max-w-4xl mx-auto">
         <CardHeader>
+        <CardTitle className="text-3xl font-bold text-center text-blue-600 dark:text-blue-400">
+            ElectionId :  
+            {election_id}
+          </CardTitle>
           <CardTitle className="text-3xl font-bold text-center text-blue-600 dark:text-blue-400">
             ElectionName :  
             {electionData?.name}

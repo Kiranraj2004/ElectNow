@@ -1,23 +1,18 @@
-// src/pages/LandingPage.jsx
+import React, { useEffect, useState } from 'react';
 import BlurIn from '@/components/ui/blur-in';
 import TypingAnimation from '@/components/ui/typing-animation';
 import { RainbowButton } from '@/components/ui/rainbow-button';
 import { cn } from "@/lib/utils";
 import GridPattern from "@/components/ui/grid-pattern";
 
-import { motion } from 'framer-motion'
-import { ChevronRight, CheckCircle, Users, Vote, BarChart } from 'lucide-react'
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-
-
+import { motion } from 'framer-motion';
+import { ChevronRight, CheckCircle, Users, Vote, BarChart } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 import { useAuth0 } from '@auth0/auth0-react';
-import { useEffect, useState } from 'react';
-import AuthButton from '@/components/LoginButton';
-
-
 import { useNavigate } from 'react-router-dom';
+import AuthButton from '@/components/LoginButton';
 
 const FeatureCard = ({ icon: Icon, title, description }) => (
   <Card className="hover:shadow-lg transition-shadow duration-300">
@@ -27,7 +22,7 @@ const FeatureCard = ({ icon: Icon, title, description }) => (
       <p className="text-gray-600 dark:text-gray-300 text-center">{description}</p>
     </CardContent>
   </Card>
-)
+);
 
 const StepCard = ({ step, description }) => (
   <motion.div
@@ -44,48 +39,66 @@ const StepCard = ({ step, description }) => (
       </CardContent>
     </Card>
   </motion.div>
-)
+);
 
 const LandingPage = () => {
-  const navigate=useNavigate();
-  const [useremail,setuseremail]=useState();
-  const { isAuthenticated, loginWithRedirect, isLoading,user } = useAuth0();
-  const getstrtedbuttonhandler=()=>{
-    if(isAuthenticated){
+  const navigate = useNavigate();
+  const [userEmail, setUserEmail] = useState();
+  const [notification, setNotification] = useState(null); // State to manage notifications
+  const { isAuthenticated, loginWithRedirect, isLoading, user } = useAuth0();
+
+  const showNotification = (message, type) => {
+    setNotification({ message, type });
+    setTimeout(() => {
+      setNotification(null);
+    }, 3000); // Notification disappears after 3 seconds
+  };
+
+  const getStartedButtonHandler = () => {
+    if (isAuthenticated) {
+      showNotification("Logged in successfully!", "success");
       navigate("/dashboard");
-    }else{
+    } else {
       loginWithRedirect();
     }
-  }
+  };
 
   useEffect(() => {
     const fetchUserEmail = async () => {
       try {
         if (isLoading) {
-          console.log("Waiting for Auth0 to finish loading...");
-          return; // Do nothing until Auth0 is loaded
+          showNotification("Loading... Please wait.", "info");
+          return;
         }
-  
+
         if (isAuthenticated && user?.email) {
-          setuseremail(user.email);
+          setUserEmail(user.email);
+          showNotification(`Welcome, ${user.name}!`, "success");
         }
       } catch (error) {
+        showNotification("Error fetching user details.", "error");
         console.error("Error fetching user email:", error);
       }
     };
-  
-    fetchUserEmail(); // Call the asynchronous function
-  }, [isAuthenticated, user, isLoading]);
-  
-  
-  
-  
 
+    fetchUserEmail();
+  }, [isAuthenticated, user, isLoading]);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-100 to-white dark:from-blue-900 dark:to-gray-900 transition-colors duration-300">
+      {/* Top Notification */}
+      {notification && (
+        <div
+          className={`fixed  top-2 left-1/2 w-auto z-50 p-3 text-center text-whiten rounded-md ${
+            notification.type === "success" ? "bg-green-500" : "bg-red-500"
+          }`}
+        >
+          {notification.message}
+        </div>
+      )}
+
       {/* Navigation Bar */}
-      <nav className=" top-0  bg-white/75 dark:bg-gray-900/75 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700">
+      <nav className="top-0 bg-white/75 dark:bg-gray-900/75 text-gray-900 dark:text-white border-b border-gray-200 dark:border-gray-700">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <BlurIn word="ElectNow" className="text-xl font-bold text-blue-600 dark:text-blue-400" />
           <AuthButton />
@@ -102,7 +115,7 @@ const LandingPage = () => {
           <p className="text-lg sm:text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
             Create elections, add members, and manage votes effortlessly
           </p>
-          <RainbowButton onClick={getstrtedbuttonhandler} className="text-lg px-8 py-3">
+          <RainbowButton onClick={getStartedButtonHandler} className="text-lg px-8 py-3">
             Get Started <ChevronRight className="ml-2 h-5 w-5" />
           </RainbowButton>
         </div>
@@ -135,6 +148,7 @@ const LandingPage = () => {
         </div>
       </section>
 
+
       {/* How It Works Section */}
       <section className="py-20 bg-white dark:bg-gray-900">
         <div className="container mx-auto px-4">
@@ -164,17 +178,17 @@ const LandingPage = () => {
       <footer className="py-8 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <p className="mb-4 md:mb-0">© {new Date().getFullYear()} ElectNow. All Rights Reserved.</p>
+            <p className="mb-4 md:mb-0"></p>
             <div className="flex space-x-4">
-              <a href="#" className="hover:text-blue-500 transition-colors duration-300">Privacy Policy</a>
-              <a href="#" className="hover:text-blue-500 transition-colors duration-300">About</a>
-              <a href="#" className="hover:text-blue-500 transition-colors duration-300">Contact</a>
+              <a href="https://github.com/Kiranraj2004/ElectNow" className="hover:text-blue-500 transition-colors duration-300">code </a>
+              <a href="https://www.linkedin.com/in/kiran-raj-a174b0287/" className="hover:text-blue-500 transition-colors duration-300">linkedin</a>
+              {/* <a href="kiranrajb5882@gmail.com" className="hover:text-blue-500 transition-colors duration-300">Contact</a> */}
             </div>
           </div>
         </div>
       </footer>
     </div>
-  )
+  );
 };
 
 export default LandingPage;

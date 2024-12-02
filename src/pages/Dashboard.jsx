@@ -3,16 +3,17 @@ import { useState, useEffect } from "react";
 import AuthButton from "@/components/LoginButton";
 import { supabase } from "@/supabaseClient";
 import { useAuth0 } from "@auth0/auth0-react";
-
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Plus, ArrowRight, History } from 'lucide-react'
+import Toast from "@/components/Toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Plus, ArrowRight, History } from "lucide-react";
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [roomCode, setRoomCode] = useState("");
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("success");
   const [recentElections, setRecentElections] = useState([]);
   const { user, isLoading } = useAuth0();
 
@@ -25,8 +26,8 @@ const Dashboard = () => {
       .limit(5);
 
     if (error) {
-      console.error("Error fetching recent elections:", error);
       setMessage("Failed to fetch recent elections.");
+      setMessageType("error");
       setTimeout(() => setMessage(""), 3000);
       return [];
     }
@@ -43,6 +44,7 @@ const Dashboard = () => {
       }
 
       setMessage("Loading recent elections...");
+      setMessageType("success");
       const elections = await fetchRecentElections(user.email);
       setRecentElections(elections);
       setMessage("");
@@ -55,6 +57,7 @@ const Dashboard = () => {
     try {
       if (!user || !user.email) {
         setMessage("You need to log in to access this feature.");
+        setMessageType("error");
         setTimeout(() => setMessage(""), 3000);
         navigate("/");
         return;
@@ -68,6 +71,7 @@ const Dashboard = () => {
 
       if (error) {
         setMessage("Invalid Room Code. Please try again.");
+        setMessageType("error");
         setTimeout(() => setMessage(""), 3000);
         return;
       }
@@ -90,10 +94,16 @@ const Dashboard = () => {
       const updatedElections = await fetchRecentElections(user.email);
       setRecentElections(updatedElections);
 
+      setMessage("Successfully joined the election!");
+      setMessageType("success");
+      setTimeout(() => setMessage(""), 3000);
+
       navigate(`/room/${roomCode}`);
     } catch (err) {
       console.error("Unexpected error:", err);
       setMessage("An unexpected error occurred.");
+      setMessageType("error");
+      setTimeout(() => setMessage(""), 3000);
     }
   };
 
@@ -109,13 +119,7 @@ const Dashboard = () => {
         </header>
 
         <main className="container mx-auto px-4 py-8">
-          {message && (
-            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-              <p className="bg-red-500 text-white px-4 py-2 rounded-md shadow-lg">
-                {message}
-              </p>
-            </div>
-          )}
+        <Toast message={message} type={messageType} />
 
           <Card className="mb-8">
             <CardHeader>

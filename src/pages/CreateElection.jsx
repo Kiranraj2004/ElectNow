@@ -9,15 +9,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
+import Toast from "@/components/Toast";
 
 function CreateElection() {
   const [electionName, setElectionName] = useState("");
   const [positions, setPositions] = useState([
     { position: "", members: [{ name: "" }] },
   ]);
-  const [issucess, setsucess] = useState(false);
+
   const[isLoading1, setLoading] = useState(false);
-  const [error, setError] = useState("");
+
   const navigate = useNavigate();
 
   const [days, setDays] = useState(0);
@@ -25,6 +26,10 @@ function CreateElection() {
   const [minutes, setMinutes] = useState(0);
 
   const { user, isLoading } = useAuth0();
+
+  const [message, setMessage] = useState("");
+const [messageType, setMessageType] = useState(""); // 'success' or 'error'
+
 
   // Handle adding a new member
   const addMember = (positionIndex) => {
@@ -63,35 +68,34 @@ function CreateElection() {
   };
 
   // Form validation
-  const validateFields = () => {
-    if (!electionName.trim()) {
-      setError("Election name cannot be empty.");
-        setTimeout(function () {
-      setError(""); // Clears the message after 3 seconds
-    }, 3000);
+ const validateFields = () => {
+  if (!electionName.trim()) {
+    setMessage("Election name cannot be empty.");
+    setMessageType("error");
+    setTimeout(() => setMessage(""), 3000); // Clears the message after 3 seconds
+    return false;
+  }
+
+  for (let pos of positions) {
+    if (!pos.position.trim()) {
+      setMessage("All positions must have a name.");
+      setMessageType("error");
+      setTimeout(() => setMessage(""), 3000);
       return false;
     }
-    for (let pos of positions) {
-      if (!pos.position.trim()) {
-        setError("All positions must have a name.");
-        setTimeout(function () {
-          setError(""); // Clears the message after 3 seconds
-        }, 3000);
+    for (let member of pos.members) {
+      if (!member.name.trim()) {
+        setMessage("All members must have a name.");
+        setMessageType("error");
+        setTimeout(() => setMessage(""), 3000);
         return false;
       }
-      for (let member of pos.members) {
-        if (!member.name.trim()) {
-          setError("All members must have a name.");
-          setTimeout(function () {
-            setError(""); // Clears the message after 3 seconds
-          }, 3000);
-          return false;
-        }
-      }
     }
-    
-    return true;
-  };
+  }
+
+  return true;
+};
+
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -101,10 +105,7 @@ function CreateElection() {
         return;
       }
 
-      setMessage("Loading recent elections...");
-      const elections = await fetchRecentElections(user.email);
-      setRecentElections(elections);
-      setMessage("");
+        
     };
 
     fetchUserData();
@@ -118,29 +119,29 @@ function CreateElection() {
   
     try {
       setLoading(true);
-      // Insert election
       const currentDateTime = new Date();
-
-      // Calculate the voting deadline
       const votingDeadline = new Date(
         currentDateTime.getTime() +
-          days * 24 * 60 * 60 * 1000 + // Days to milliseconds
-          hours * 60 * 60 * 1000 + // Hours to milliseconds
-          minutes * 60 * 1000 // Minutes to milliseconds
+          days * 24 * 60 * 60 * 1000 +
+          hours * 60 * 60 * 1000 +
+          minutes * 60 * 1000
       );
+  
       const { data: electionData, error: electionError } = await supabase
         .from("elections")
-        .insert([{ name: electionName, created_by: user.email ,voting_deadline: votingDeadline.toISOString(),  }])
+        .insert([{ name: electionName, created_by: user.email, voting_deadline: votingDeadline.toISOString() }])
         .select();
   
       if (electionError) {
         console.error("Error creating election:", electionError);
+        setMessage("Failed to create the election. Try again.");
+        setMessageType("error");
+        setTimeout(() => setMessage(""), 3000);
         return;
       }
   
       const electionId = electionData[0].id;
   
-      // Insert positions and their members
       for (const pos of positions) {
         const { data: positionData, error: positionError } = await supabase
           .from("positions")
@@ -149,55 +150,42 @@ function CreateElection() {
   
         if (positionError) {
           console.error("Error creating position:", positionError);
-          continue; // Skip to the next position if there's an error
+          continue;
         }
   
         const positionId = positionData[0].id;
   
-        // Insert members for the position
         const memberInsertions = pos.members.map((member) =>
-          supabase
-            .from("members")
-            .insert([{ position_id: positionId, member_name: member.name }])
+          supabase.from("members").insert([{ position_id: positionId, member_name: member.name }])
         );
   
         const memberResults = await Promise.all(memberInsertions);
   
-        // Check for any member insertion errors
         memberResults.forEach(({ error: memberError }, idx) => {
           if (memberError) {
-            console.error(
-              `Error creating member '${pos.members[idx].name}':`,
-              memberError
-            );
+            console.error(`Error creating member '${pos.members[idx].name}':`, memberError);
           }
         });
       }
-      const { data: positionData, error: positionError } = await supabase
-          .from("user_elections")
-          .insert([{ user_email: user.email, election_id: electionId ,election_name: electionName}])
-          .select();
   
-        if (positionError) {
-          console.error("Error creating position:", positionError);
-          // Skip to the next position if there's an error
-        }
-
+      await supabase
+        .from("user_elections")
+        .insert([{ user_email: user.email, election_id: electionId, election_name: electionName }]);
   
-      console.log("Election created successfully!");
-          setError("Election created successfully");
-          setsucess(true);
-    setTimeout(function () {
-      setError("");
-      setsucess(true); // Clears the message after 3 seconds
-    }, 3000);
-    setLoading(false);
+      setMessage("Election created successfully!");
+      setMessageType("success");
+      setTimeout(() => setMessage(""), 3000);
+  
+      setLoading(false);
       navigate(`/room/${electionId}`);
-    
     } catch (error) {
       console.error("Unexpected error creating election:", error);
+      setMessage("An unexpected error occurred.");
+      setMessageType("error");
+      setTimeout(() => setMessage(""), 3000);
     }
   };
+  
   
 
   return (
@@ -209,20 +197,8 @@ function CreateElection() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <AnimatePresence>
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -50 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -50 }}
-                className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 p-4 rounded-md shadow-lg ${
-                  issucess ? "bg-green-500" : "bg-red-500"
-                } text-white font-bold`}
-              >
-                {error}
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <Toast message={message} type={messageType} />
+
 
           <div className="space-y-6">
             <div>
@@ -296,10 +272,12 @@ function CreateElection() {
               ))}
             </div>
 
+            <h2>Set Voting Duration</h2>
 
-            <div>
-                    <h2>Set Voting Duration</h2>
-                    <label >Days : </label>
+
+            <div className="flex flex-row justify-around ">
+                   
+                    <label  className="mt-1">Days : </label>
                     <input
                       type="number"
                       placeholder="Days"
@@ -307,7 +285,7 @@ function CreateElection() {
                       onChange={(e) => setDays(Number(e.target.value))}
                       className="border p-2 rounded text-black"
                     />
-                     <label >Hours: </label>
+                     <label className="mt-1">Hours: </label>
                     <input
                       type="number"
                       placeholder="Hours"
@@ -315,7 +293,7 @@ function CreateElection() {
                       onChange={(e) => setHours(Number(e.target.value))}
                       className="border p-2 rounded text-black"
                     />
-                     <label >Minutes: </label>
+                     <label className="mt-1">Minutes: </label>
                     <input
                       type="number"
                       placeholder="Minutes"
@@ -325,7 +303,7 @@ function CreateElection() {
                     />
                   </div>
 
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between">
               <Button
                 variant="outline"
                 onClick={() => navigate("/dashboard")}
@@ -336,11 +314,11 @@ function CreateElection() {
               </Button>
 
 
-              <div className="space-x-2">
+              <div className="">
                 <Button
                   variant="outline"
                   onClick={addPosition}
-                  className=" bg-black text-white dark:bg-white dark:text-black"  
+                  className=" bg-black text-white dark:bg-white dark:text-black mr-4"  
                 >
                   <Plus className="h-4 w-4 mr-2" />
                   Add Position

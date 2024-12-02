@@ -17,12 +17,13 @@ import ResultsPage from './pages/ResultsPage';
 function App() {
 
   return (
-    <ThemeSwitcher >
-    <div className="min-h-screen">
-
+    
     
       <BrowserRouter>
         {/* Provide the context to the entire app */}
+        <ThemeSwitcher >
+    <div className="min-h-screen">
+
          
             <Routes>
               <Route path="/" element={<LandingPage />} />
@@ -34,11 +35,12 @@ function App() {
               <Route path="/results/:election_id" element={<ResultsPage />} />
               <Route path="/navbar" element={<Navbar />} />
             </Routes>
+            </div>
+      </ThemeSwitcher>
             
           
       </BrowserRouter>
-      </div>
-      </ThemeSwitcher>
+      
   );
 }
 
